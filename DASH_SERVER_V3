@@ -1,0 +1,74 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+
+-- Create a remote event for the dash action if it doesn't already exist
+local dashEvent = ReplicatedStorage:FindFirstChild("DashEvent")
+if not dashEvent then
+	dashEvent = Instance.new("RemoteEvent")
+	dashEvent.Name = "DashEvent"
+	dashEvent.Parent = ReplicatedStorage
+end
+
+-- Function to handle dashing
+local function onDashFired(player, direction)
+	local character = player.Character
+	if character then
+		local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+		local humanoid = character:FindFirstChild("Humanoid")
+
+		if humanoidRootPart and humanoid then
+			-- Ensure direction is relative to the world
+			local velocityDirection = direction
+			local dashSpeed = 75
+			local dashDuration = 0.2
+
+			-- Create and configure BodyVelocity
+			local bodyVelocity = Instance.new("BodyVelocity")
+			bodyVelocity.Velocity = humanoidRootPart.CFrame:VectorToWorldSpace(velocityDirection * dashSpeed)
+			bodyVelocity.MaxForce = Vector3.new(100000, 100000, 100000)
+			bodyVelocity.Parent = humanoidRootPart
+
+			-- Create and configure BodyGyro to maintain orientation
+			local bodyGyro = Instance.new("BodyGyro")
+			bodyGyro.CFrame = humanoidRootPart.CFrame
+			bodyGyro.P = 3000
+			bodyGyro.MaxTorque = Vector3.new(4000, 4000, 4000)
+			bodyGyro.Parent = humanoidRootPart
+
+			-- Debug: Print direction and animation ID
+			print("Dash Direction:", direction)
+
+			-- Play dash animation based on direction
+			local animationId
+			if direction == Vector3.new(0, 0, -1) then
+				animationId = "rbxassetid://18804348828"  -- Forward Dash Animation
+			elseif direction == Vector3.new(0, 0, 1) then
+				animationId = "rbxassetid://18804351831"  -- Backward Dash Animation
+			elseif direction == Vector3.new(-1, 0, 0) then
+				animationId = "rbxassetid://18804342502"  -- Left Dash Animation
+			elseif direction == Vector3.new(1, 0, 0) then
+				animationId = "rbxassetid://18804345760" -- Right Dash Animation
+			end
+
+			if animationId then
+				local animation = Instance.new("Animation")
+				animation.AnimationId = animationId
+				local animTrack = humanoid:LoadAnimation(animation)
+				animTrack:Play()
+				animTrack.Stopped:Connect(function()
+					animTrack:Destroy()
+				end)
+
+				-- Debug: Print animation ID
+				print("Playing Animation:", animationId)
+			end
+
+			-- Remove BodyVelocity and BodyGyro after the dash duration
+			game:GetService("Debris"):AddItem(bodyVelocity, dashDuration)
+			game:GetService("Debris"):AddItem(bodyGyro, dashDuration)
+		end
+	end
+end
+
+-- Connect the dash event to the function
+dashEvent.OnServerEvent:Connect(onDashFired)
